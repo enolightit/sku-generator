@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SKU Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .attr-card {
+      transition: all 0.2s ease;
+    }
+
+    .attr-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .fade-in {
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    #skuList {
+      max-height: 60vh;
+    }
+
+    .sku-row:nth-child(even) {
+      background: rgba(99, 102, 241, 0.04);
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81' }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <h1 class="text-xl font-bold text-gray-900 tracking-tight">SKU Generator</h1>
+      <span class="text-xs text-gray-400 hidden sm:inline">Cartesian product SKU builder</span>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex flex-col lg:flex-row gap-6">
+
+    <!-- LEFT PANEL -->
+    <section class="lg:w-[420px] shrink-0 flex flex-col gap-5">
+
+      <!-- Template Bar -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-3">
+        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Templates</label>
+        <div class="flex gap-2">
+          <select id="templateSelect"
+            class="flex-1 rounded-lg border border-gray-300 text-sm px-3 py-2 focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none bg-white">
+            <option value="">— none —</option>
+          </select>
+          <button onclick="loadTemplate()" title="Load"
+            class="px-3 py-2 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 text-sm font-medium transition">Load</button>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="saveTemplate()"
+            class="flex-1 px-3 py-2 rounded-lg bg-brand-600 text-white hover:bg-brand-700 text-sm font-medium transition">Save
+            Template</button>
+          <button onclick="deleteTemplate()"
+            class="px-3 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 text-sm font-medium transition">Delete</button>
+        </div>
+      </div>
+
+      <!-- Model & Sort -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-4">
+        <div>
+          <label for="modelName" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Model
+            Name (Base Code)</label>
+          <input id="modelName" type="text" placeholder="e.g. M28SN"
+            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none"
+            oninput="autoSave()">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Sort Direction</label>
+          <div class="flex rounded-lg overflow-hidden border border-gray-300">
+            <button id="btnAsc" onclick="setSortDir('ASC')"
+              class="flex-1 py-2 text-sm font-medium transition">ASC</button>
+            <button id="btnDesc" onclick="setSortDir('DESC')"
+              class="flex-1 py-2 text-sm font-medium transition">DESC</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Attributes -->
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-gray-700">Attributes</h2>
+        <button onclick="addAttribute()"
+          class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand-600 text-white hover:bg-brand-700 text-xs font-medium transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path d="M12 5v14m-7-7h14" />
+          </svg>
+          Add Attribute
+        </button>
+      </div>
+
+      <div id="attrContainer" class="flex flex-col gap-3"></div>
+
+      <!-- Generate -->
+      <button onclick="generate()"
+        class="w-full py-3 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 active:scale-[0.98] transition shadow-sm">
+        Generate SKUs
+      </button>
+    </section>
+
+    <!-- RIGHT PANEL -->
+    <section class="flex-1 min-w-0">
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col h-full">
+        <!-- Summary -->
+        <div id="summary" class="p-4 border-b border-gray-100 text-sm text-gray-500">
+          Configure attributes and click <span class="font-medium text-gray-700">Generate</span> to see SKUs.
+        </div>
+        <!-- SKU List -->
+        <div id="skuList" class="overflow-y-auto flex-1 font-mono text-sm"></div>
+        <!-- Footer -->
+        <div id="resultFooter" class="p-3 border-t border-gray-100 flex justify-end gap-2 hidden">
+          <button onclick="copyAll()"
+            class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium transition">Copy
+            All</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const LS_CONFIG = 'sku_last_config';
+    const LS_TEMPLATES = 'sku_templates';
+
+    let sortDirection = 'ASC';
+    let attrIdCounter = 0;
+    let generatedSkus = [];
+
+    // ── Helpers ──
+
+    function getTemplates() {
+      try { return JSON.parse(localStorage.getItem(LS_TEMPLATES)) || {}; } catch { return {}; }
+    }
+    function setTemplates(t) { localStorage.setItem(LS_TEMPLATES, JSON.stringify(t)); }
+
+    function getCurrentConfig() {
+      const cards = document.querySelectorAll('.attr-card');
+      const attributes = Array.from(cards).map(card => ({
+        name: card.querySelector('.attr-name').value.trim(),
+        sort_priority: parseInt(card.querySelector('.attr-priority').value) || 1,
+        variants: card.querySelector('.attr-variants').value.split(',').map(v => v.trim()).filter(Boolean)
+      }));
+      return {
+        modelName: document.getElementById('modelName').value.trim(),
+        sortDirection,
+        attributes
+      };
+    }
+
+    function applyConfig(cfg) {
+      document.getElementById('modelName').value = cfg.modelName || '';
+      setSortDir(cfg.sortDirection || 'ASC');
+      document.getElementById('attrContainer').innerHTML = '';
+      attrIdCounter = 0;
+      (cfg.attributes || []).forEach(a => addAttribute(a));
+    }
+
+    function autoSave() {
+      localStorage.setItem(LS_CONFIG, JSON.stringify(getCurrentConfig()));
+    }
+
+    // ── Sort Direction ──
+
+    function setSortDir(dir) {
+      sortDirection = dir;
+      const asc = document.getElementById('btnAsc');
+      const desc = document.getElementById('btnDesc');
+      if (dir === 'ASC') {
+        asc.className = 'flex-1 py-2 text-sm font-medium transition bg-brand-600 text-white';
+        desc.className = 'flex-1 py-2 text-sm font-medium transition bg-white text-gray-600 hover:bg-gray-50';
+      } else {
+        desc.className = 'flex-1 py-2 text-sm font-medium transition bg-brand-600 text-white';
+        asc.className = 'flex-1 py-2 text-sm font-medium transition bg-white text-gray-600 hover:bg-gray-50';
+      }
+      autoSave();
+    }
+
+    // ── Attributes ──
+
+    function addAttribute(data) {
+      const id = attrIdCounter++;
+      const container = document.getElementById('attrContainer');
+      const card = document.createElement('div');
+      card.className = 'attr-card fade-in bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-3';
+      card.dataset.id = id;
+      card.innerHTML = `
+    <div class="flex items-center justify-between">
+      <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Attribute</span>
+      <button onclick="removeAttribute(this)" class="p-1 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-500 transition" title="Remove">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="grid grid-cols-[1fr_80px] gap-3">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Name</label>
+        <input type="text" class="attr-name w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none" placeholder="e.g. Finish" value="${data?.name || ''}" oninput="autoSave()">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Priority</label>
+        <input type="number" min="1" class="attr-priority w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none" value="${data?.sort_priority ?? 1}" oninput="autoSave()">
+      </div>
+    </div>
+    <div>
+      <label class="block text-xs text-gray-500 mb-1">Variants <span class="text-gray-400">(comma-separated)</span></label>
+      <input type="text" class="attr-variants w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none" placeholder="e.g. WM, BM" value="${data?.variants?.join(', ') || ''}" oninput="autoSave()">
+    </div>
+  `;
+      container.appendChild(card);
+      autoSave();
+    }
+
+    function removeAttribute(btn) {
+      btn.closest('.attr-card').remove();
+      autoSave();
+    }
+
+    // ── SKU Generation ──
+
+    function cartesianProduct(arrays) {
+      return arrays.reduce((acc, arr) => {
+        const result = [];
+        for (const a of acc) for (const b of arr) result.push([...a, b]);
+        return result;
+      }, [[]]);
+    }
+
+    function generate() {
+      const cfg = getCurrentConfig();
+      const { modelName, attributes } = cfg;
+
+      if (!modelName) { alert('Please enter a Model Name.'); return; }
+      const valid = attributes.filter(a => a.name && a.variants.length > 0);
+      if (valid.length === 0) { alert('Add at least one attribute with variants.'); return; }
+
+      const codeLists = valid.map(a => a.variants);
+      const variantRank = valid.map(a => {
+        const m = {};
+        a.variants.forEach((v, i) => m[v] = i);
+        return m;
+      });
+
+      const priorityIndices = valid
+        .map((a, i) => ({ i, p: a.sort_priority }))
+        .sort((a, b) => a.p - b.p)
+        .map(x => x.i);
+
+      let combos = cartesianProduct(codeLists);
+      combos.sort((a, b) => {
+        for (const idx of priorityIndices) {
+          const diff = variantRank[idx][a[idx]] - variantRank[idx][b[idx]];
+          if (diff !== 0) return cfg.sortDirection === 'DESC' ? -diff : diff;
+        }
+        return 0;
+      });
+
+      generatedSkus = combos.map(c => modelName + c.join(''));
+
+      const counts = valid.map(a => a.variants.length).join(' × ');
+      const sortedAttrs = [...valid].sort((a, b) => a.sort_priority - b.sort_priority);
+      const sortInfo = sortedAttrs.map(a => a.name).join(' → ') + ` (${cfg.sortDirection})`;
+
+      document.getElementById('summary').innerHTML = `
+    <div class="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+      <span><span class="text-gray-400">Product:</span> <strong class="text-gray-800">${modelName}</strong></span>
+      <span><span class="text-gray-400">Attributes:</span> ${valid.map(a => a.name).join(', ')}</span>
+      <span><span class="text-gray-400">Sort:</span> ${sortInfo}</span>
+      <span><span class="text-gray-400">Variants:</span> ${counts} = <strong class="text-brand-600">${generatedSkus.length}</strong> total</span>
+    </div>
+  `;
+
+      const list = document.getElementById('skuList');
+      list.innerHTML = generatedSkus.map((sku, i) =>
+        `<div class="sku-row flex items-center px-4 py-1.5 gap-3">
+      <span class="text-gray-300 text-xs w-8 text-right shrink-0">${i + 1}</span>
+      <span class="text-gray-800">${sku}</span>
+    </div>`
+      ).join('');
+
+      document.getElementById('resultFooter').classList.remove('hidden');
+      autoSave();
+    }
+
+    // ── Copy ──
+
+    function copyAll() {
+      if (!generatedSkus.length) return;
+      navigator.clipboard.writeText(generatedSkus.join('\n')).then(() => {
+        const btn = document.querySelector('#resultFooter button');
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('bg-green-100', 'text-green-700');
+        setTimeout(() => { btn.textContent = orig; btn.classList.remove('bg-green-100', 'text-green-700'); }, 1500);
+      });
+    }
+
+    // ── Templates ──
+
+    function refreshTemplateSelect() {
+      const sel = document.getElementById('templateSelect');
+      const templates = getTemplates();
+      const names = Object.keys(templates).sort();
+      sel.innerHTML = '<option value="">— none —</option>' + names.map(n => `<option value="${n}">${n}</option>`).join('');
+    }
+
+    function saveTemplate() {
+      const name = prompt('Template name:');
+      if (!name || !name.trim()) return;
+      const templates = getTemplates();
+      templates[name.trim()] = getCurrentConfig();
+      setTemplates(templates);
+      refreshTemplateSelect();
+      document.getElementById('templateSelect').value = name.trim();
+    }
+
+    function loadTemplate() {
+      const name = document.getElementById('templateSelect').value;
+      if (!name) return;
+      const templates = getTemplates();
+      if (!templates[name]) return;
+      applyConfig(templates[name]);
+    }
+
+    function deleteTemplate() {
+      const name = document.getElementById('templateSelect').value;
+      if (!name) return;
+      if (!confirm(`Delete template "${name}"?`)) return;
+      const templates = getTemplates();
+      delete templates[name];
+      setTemplates(templates);
+      refreshTemplateSelect();
+    }
+
+    // ── Init ──
+
+    (function init() {
+      setSortDir('ASC');
+      refreshTemplateSelect();
+      try {
+        const saved = JSON.parse(localStorage.getItem(LS_CONFIG));
+        if (saved) { applyConfig(saved); return; }
+      } catch { }
+      addAttribute({ name: 'Head Type', sort_priority: 3, variants: ['45', '55', '65'] });
+      addAttribute({ name: 'Finish', sort_priority: 1, variants: ['WM', 'BM'] });
+      addAttribute({ name: 'Light Color', sort_priority: 2, variants: ['27K', '30K', '40K', '50K'] });
+      document.getElementById('modelName').value = 'M28SN';
+      setSortDir('ASC');
+    })();
+  </script>
+
+</body>
+
+</html>

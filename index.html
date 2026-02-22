@@ -268,11 +268,6 @@
       if (valid.length === 0) { alert('Add at least one attribute with variants.'); return; }
 
       const codeLists = valid.map(a => a.variants);
-      const variantRank = valid.map(a => {
-        const m = {};
-        a.variants.forEach((v, i) => m[v] = i);
-        return m;
-      });
 
       const priorityIndices = valid
         .map((a, i) => ({ i, p: a.sort_priority }))
@@ -282,8 +277,8 @@
       let combos = cartesianProduct(codeLists);
       combos.sort((a, b) => {
         for (const idx of priorityIndices) {
-          const diff = variantRank[idx][a[idx]] - variantRank[idx][b[idx]];
-          if (diff !== 0) return cfg.sortDirection === 'DESC' ? -diff : diff;
+          const cmp = a[idx].localeCompare(b[idx], undefined, { numeric: true, sensitivity: 'base' });
+          if (cmp !== 0) return cfg.sortDirection === 'DESC' ? -cmp : cmp;
         }
         return 0;
       });

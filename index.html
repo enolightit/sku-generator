@@ -221,8 +221,8 @@
       card.innerHTML = `
     <div class="flex items-center justify-between">
       <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Attribute</span>
-      <button onclick="removeAttribute(this)" class="p-1 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-500 transition" title="Remove">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      <button class="remove-attr-btn p-1 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-500 transition" title="Remove">
+        <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
     <div class="grid grid-cols-[1fr_80px] gap-3">
@@ -244,10 +244,13 @@
       autoSave();
     }
 
-    function removeAttribute(btn) {
-      btn.closest('.attr-card').remove();
-      autoSave();
-    }
+    document.getElementById('attrContainer').addEventListener('click', function (e) {
+      const btn = e.target.closest('.remove-attr-btn');
+      if (btn) {
+        btn.closest('.attr-card').remove();
+        autoSave();
+      }
+    });
 
     // ── SKU Generation ──
 

@@ -369,13 +369,8 @@
       refreshTemplateSelect();
       try {
         const saved = JSON.parse(localStorage.getItem(LS_CONFIG));
-        if (saved) { applyConfig(saved); return; }
+        if (saved) { applyConfig(saved); }
       } catch { }
-      addAttribute({ name: 'Head Type', sort_priority: 3, variants: ['45', '55', '65'] });
-      addAttribute({ name: 'Finish', sort_priority: 1, variants: ['WM', 'BM'] });
-      addAttribute({ name: 'Light Color', sort_priority: 2, variants: ['27K', '30K', '40K', '50K'] });
-      document.getElementById('modelName').value = 'M28SN';
-      setSortDir('ASC');
     })();
   </script>
 

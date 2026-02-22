@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SKU Generator</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -19,6 +20,18 @@
 
     .attr-card:hover {
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .attr-card.dragging {
+      opacity: 0.35;
+    }
+
+    .drag-handle {
+      cursor: grab;
+    }
+
+    .drag-handle:active {
+      cursor: grabbing;
     }
 
     .fade-in {
@@ -172,7 +185,6 @@
       const cards = document.querySelectorAll('.attr-card');
       const attributes = Array.from(cards).map(card => ({
         name: card.querySelector('.attr-name').value.trim(),
-        sort_priority: parseInt(card.querySelector('.attr-priority').value) || 1,
         variants: card.querySelector('.attr-variants').value.split(',').map(v => v.trim()).filter(Boolean)
       }));
       return {
@@ -219,20 +231,23 @@
       card.dataset.id = id;
       card.innerHTML = `
     <div class="flex items-center justify-between">
-      <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Attribute</span>
+      <div class="flex items-center gap-2">
+        <div class="drag-handle p-1 text-gray-300 hover:text-gray-500 transition" title="Drag to reorder">
+          <svg class="w-4 h-4 pointer-events-none" fill="currentColor" viewBox="0 0 16 16">
+            <circle cx="5" cy="4" r="1.5"/><circle cx="11" cy="4" r="1.5"/>
+            <circle cx="5" cy="8" r="1.5"/><circle cx="11" cy="8" r="1.5"/>
+            <circle cx="5" cy="12" r="1.5"/><circle cx="11" cy="12" r="1.5"/>
+          </svg>
+        </div>
+        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Attribute</span>
+      </div>
       <button class="remove-attr-btn p-1 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-500 transition" title="Remove">
         <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
-    <div class="grid grid-cols-[1fr_80px] gap-3">
-      <div>
-        <label class="block text-xs text-gray-500 mb-1">Name</label>
-        <input type="text" class="attr-name w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none" placeholder="e.g. Finish" value="${data?.name || ''}" oninput="autoSave()">
-      </div>
-      <div>
-        <label class="block text-xs text-gray-500 mb-1">Priority</label>
-        <input type="number" min="1" class="attr-priority w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none" value="${data?.sort_priority ?? 1}" oninput="autoSave()">
-      </div>
+    <div>
+      <label class="block text-xs text-gray-500 mb-1">Name</label>
+      <input type="text" class="attr-name w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none" placeholder="e.g. Finish" value="${data?.name || ''}" oninput="autoSave()">
     </div>
     <div>
       <label class="block text-xs text-gray-500 mb-1">Variants <span class="text-gray-400">(comma-separated)</span></label>
@@ -249,6 +264,15 @@
         btn.closest('.attr-card').remove();
         autoSave();
       }
+    });
+
+    // ── Drag & Drop reordering ──
+
+    Sortable.create(document.getElementById('attrContainer'), {
+      handle: '.drag-handle',
+      animation: 150,
+      ghostClass: 'dragging',
+      onEnd: function () { autoSave(); }
     });
 
     // ── SKU Generation ──
@@ -271,14 +295,9 @@
 
       const codeLists = valid.map(a => a.variants);
 
-      const priorityIndices = valid
-        .map((a, i) => ({ i, p: a.sort_priority }))
-        .sort((a, b) => a.p - b.p)
-        .map(x => x.i);
-
       let combos = cartesianProduct(codeLists);
       combos.sort((a, b) => {
-        for (const idx of priorityIndices) {
+        for (let idx = 0; idx < a.length; idx++) {
           const cmp = a[idx].localeCompare(b[idx], undefined, { numeric: true, sensitivity: 'base' });
           if (cmp !== 0) return cfg.sortDirection === 'DESC' ? -cmp : cmp;
         }
@@ -288,8 +307,7 @@
       generatedSkus = combos.map(c => modelName + c.join(''));
 
       const counts = valid.map(a => a.variants.length).join(' × ');
-      const sortedAttrs = [...valid].sort((a, b) => a.sort_priority - b.sort_priority);
-      const sortInfo = sortedAttrs.map(a => a.name).join(' → ') + ` (${cfg.sortDirection})`;
+      const sortInfo = valid.map(a => a.name).join(' → ') + ` (${cfg.sortDirection})`;
 
       document.getElementById('summary').innerHTML = `
     <div class="flex flex-wrap gap-x-6 gap-y-1 text-sm">

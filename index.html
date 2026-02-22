@@ -185,6 +185,7 @@
       const cards = document.querySelectorAll('.attr-card');
       const attributes = Array.from(cards).map(card => ({
         name: card.querySelector('.attr-name').value.trim(),
+        sort_priority: parseInt(card.querySelector('.attr-priority').value) || 1,
         variants: card.querySelector('.attr-variants').value.split(',').map(v => v.trim()).filter(Boolean)
       }));
       return {
@@ -245,9 +246,15 @@
         <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
-    <div>
-      <label class="block text-xs text-gray-500 mb-1">Name</label>
-      <input type="text" class="attr-name w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none" placeholder="e.g. Finish" value="${data?.name || ''}" oninput="autoSave()">
+    <div class="grid grid-cols-[1fr_80px] gap-3">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Name</label>
+        <input type="text" class="attr-name w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none" placeholder="e.g. Finish" value="${data?.name || ''}" oninput="autoSave()">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Sort Priority</label>
+        <input type="number" min="1" class="attr-priority w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none" value="${data?.sort_priority ?? 1}" oninput="autoSave()">
+      </div>
     </div>
     <div>
       <label class="block text-xs text-gray-500 mb-1">Variants <span class="text-gray-400">(comma-separated)</span></label>
@@ -295,9 +302,14 @@
 
       const codeLists = valid.map(a => a.variants);
 
+      const priorityIndices = valid
+        .map((a, i) => ({ i, p: a.sort_priority }))
+        .sort((a, b) => a.p - b.p)
+        .map(x => x.i);
+
       let combos = cartesianProduct(codeLists);
       combos.sort((a, b) => {
-        for (let idx = 0; idx < a.length; idx++) {
+        for (const idx of priorityIndices) {
           const cmp = a[idx].localeCompare(b[idx], undefined, { numeric: true, sensitivity: 'base' });
           if (cmp !== 0) return cfg.sortDirection === 'DESC' ? -cmp : cmp;
         }
@@ -307,7 +319,8 @@
       generatedSkus = combos.map(c => modelName + c.join(''));
 
       const counts = valid.map(a => a.variants.length).join(' × ');
-      const sortInfo = valid.map(a => a.name).join(' → ') + ` (${cfg.sortDirection})`;
+      const sortedAttrs = [...valid].sort((a, b) => a.sort_priority - b.sort_priority);
+      const sortInfo = sortedAttrs.map(a => a.name).join(' → ') + ` (${cfg.sortDirection})`;
 
       document.getElementById('summary').innerHTML = `
     <div class="flex flex-wrap gap-x-6 gap-y-1 text-sm">

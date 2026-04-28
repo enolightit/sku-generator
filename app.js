@@ -139,15 +139,27 @@ function generate() {
     .sort((a, b) => a.p - b.p)
     .map(x => x.i);
 
+  const variantOrderMaps = valid.map(a => {
+    const map = new Map();
+    a.variants.forEach((variant, index) => {
+      if (!map.has(variant)) map.set(variant, index);
+    });
+    return map;
+  });
+
   let combos = cartesianProduct(codeLists);
   if (priorityIndices.length > 0) {
     combos.sort((a, b) => {
       for (const idx of priorityIndices) {
-        const cmp = a[idx].localeCompare(b[idx], undefined, { numeric: true, sensitivity: 'base' });
+        const aPos = variantOrderMaps[idx].get(a[idx]) ?? Number.MAX_SAFE_INTEGER;
+        const bPos = variantOrderMaps[idx].get(b[idx]) ?? Number.MAX_SAFE_INTEGER;
+        const cmp = aPos - bPos;
         if (cmp !== 0) return cfg.sortDirection === 'DESC' ? -cmp : cmp;
       }
       return 0;
     });
+  } else if (cfg.sortDirection === 'DESC') {
+    combos.reverse();
   }
 
   generatedSkus = combos.map(c => modelName + c.join(''));
@@ -156,8 +168,8 @@ function generate() {
   const sortedAttrs = valid.filter(a => a.sort_priority !== 0).sort((a, b) => a.sort_priority - b.sort_priority);
   const unsortedAttrs = valid.filter(a => a.sort_priority === 0);
   let sortInfo = sortedAttrs.length > 0
-    ? sortedAttrs.map(a => a.name).join(' → ') + ` (${cfg.sortDirection})`
-    : 'No sorting';
+    ? sortedAttrs.map(a => a.name).join(' -> ') + ` (${cfg.sortDirection}, input variant order)`
+    : `Input order (${cfg.sortDirection})`;
   if (unsortedAttrs.length > 0)
     sortInfo += ` · <span class="text-gray-400">${unsortedAttrs.map(a => a.name).join(', ')}: input order</span>`;
 

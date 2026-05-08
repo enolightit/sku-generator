@@ -17,7 +17,7 @@ function getCurrentConfig() {
   const attributes = Array.from(cards).map(card => ({
     name: card.querySelector('.attr-name').value.trim(),
     sort_priority: (v => isNaN(v) ? 1 : v)(parseInt(card.querySelector('.attr-priority').value, 10)),
-    variants: card.querySelector('.attr-variants').value.split(',').map(v => v.trim()).filter(Boolean)
+    variants: card.querySelector('.attr-variants').value.split(/\s+/).map(v => v.trim()).filter(Boolean)
   }));
   return {
     modelName: document.getElementById('modelName').value.trim(),
@@ -88,8 +88,8 @@ function addAttribute(data) {
       </div>
     </div>
     <div>
-      <label class="block text-xs text-gray-500 mb-1">Variants <span class="text-gray-400">(comma-separated)</span></label>
-      <input type="text" class="attr-variants w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none" placeholder="e.g. WM, BM" value="${data?.variants?.join(', ') || ''}" oninput="autoSave()">
+      <label class="block text-xs text-gray-500 mb-1">Variants <span class="text-gray-400">(space-separated)</span></label>
+      <input type="text" class="attr-variants w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none" placeholder="e.g. WM BM" value="${data?.variants?.join(' ') || ''}" oninput="autoSave()">
     </div>
   `;
   container.appendChild(card);
